@@ -33,6 +33,19 @@ func printURL(_ urlString: String) {
     }
 }
 
+func verifyURL(_ urlString: String, equals expected: DemoRoute) {
+    guard let url = URL(string: urlString) else {
+        print("URL 검증 실패: 잘못된 문자열 - \(urlString)")
+        return
+    }
+    if let route = DemoRoute(url: url) {
+        let result = route == expected ? "성공" : "실패"
+        print("URL -> route 검증 (\(urlString)) => \(result) — 생성된 값: \(route)")
+    } else {
+        print("URL -> route 검증 (\(urlString)) => 실패 — 라우트를 만들 수 없습니다")
+    }
+}
+
 print("=== DemoRoute.router 예시 ===")
 printMatch("")
 printMatch("user/42/profile")
@@ -45,3 +58,6 @@ if let url = DemoRoute.payComplete(orderId: "XYZ123").url() {
 
 printURL("myapp://app/user/42/profile")
 printURL("myapp://app/pay/complete?order_id=XYZ123")
+
+verifyURL("myapp://app/user/42/profile", equals: .userProfile(id: "42"))
+verifyURL("myapp://app/pay/complete?order_id=XYZ123", equals: .payComplete(orderId: "XYZ123"))
