@@ -1,7 +1,7 @@
 import Foundation
 
-/// 라우트 매칭/렌더링을 담당하는 스킴 라우터
-public final class ApplicationRouter<Route> {
+/// 라우트 매칭/렌더링을 담당하는 스킴 URL 매퍼
+public final class SchemeMapper<Route> {
     public struct Pattern {
         public let matcher: PathPattern
         public let makeRoute: ([String: String]) -> Route?

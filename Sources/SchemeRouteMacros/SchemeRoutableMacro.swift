@@ -86,7 +86,7 @@ struct SchemeRoutableMacro: MemberMacro {
             .joined(separator: "\n\n")
 
         let routerDecl: DeclSyntax = """
-        static let router = ApplicationRouter<\(raw: enumName)> { builder in
+        static let router = SchemeMapper<\(raw: enumName)> { builder in
         \(raw: body)
         }
         """

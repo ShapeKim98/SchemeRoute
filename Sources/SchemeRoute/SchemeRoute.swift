@@ -2,8 +2,8 @@ import Foundation
 
 /// 스킴 기반 라우트가 채택할 공통 프로토콜
 public protocol SchemeRoute: RawRepresentable where RawValue == String {
-    /// 해당 라우트를 파싱/생성하기 위한 라우터
-    static var router: ApplicationRouter<Self> { get }
+    /// 해당 라우트를 파싱/생성하기 위한 매퍼
+    static var router: SchemeMapper<Self> { get }
 }
 
 public extension SchemeRoute {
