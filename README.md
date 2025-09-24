@@ -20,11 +20,11 @@ Requirements
 ## 설치 (Swift Package Manager)
 Installation (Swift Package Manager)
 
-`Package.swift` 의 `dependencies` 배열에 `SchemeRoute` 를 최신 버전으로 추가합니다 (현재 0.1.0).<br>
-Add `SchemeRoute` to the `dependencies` array in `Package.swift` with the latest version (currently 0.1.0).
+`Package.swift` 의 `dependencies` 배열에 `SchemeRoute` 를 최신 버전으로 추가합니다 (현재 0.1.1).<br>
+Add `SchemeRoute` to the `dependencies` array in `Package.swift` with the latest version (currently 0.1.1).
 
 ```swift
-.package(url: "https://github.com/ShapeKim98/SchemeRoute.git", from: "0.1.0")
+.package(url: "https://github.com/ShapeKim98/SchemeRoute.git", from: "0.1.1")
 ```
 
 사용할 타깃의 `dependencies` 에 `SchemeRoute` 를 명시합니다.<br>
@@ -49,7 +49,7 @@ Quick Start
 import SchemeRoute
 
 @SchemeRoutable
-enum AppRoute: SchemeRoute, Equatable {
+enum AppRoute: Equatable {
     @SchemePattern("")
     case home
 
@@ -68,8 +68,8 @@ let fromURL = AppRoute(url: URL(string: "myapp://app/article/swift?ref=newslette
 let url = AppRoute.article(slug: "swift", ref: "newsletter").url(scheme: "myapp", host: "app")
 ```
 
-`@SchemeRoutable` 매크로는 `enum` 내 모든 케이스를 스캔하여 `SchemeMapper<AppRoute>` 를 생성합니다.<br>
-The `@SchemeRoutable` macro scans every case in the `enum` and generates a `SchemeMapper<AppRoute>`.
+`@SchemeRoutable` 매크로는 `enum` 내 모든 케이스를 스캔해 `SchemeMapper<AppRoute>` 를 생성하고 필요한 `SchemeRoute` 채택도 자동으로 추가합니다.<br>
+The `@SchemeRoutable` macro scans every case, generates a `SchemeMapper<AppRoute>`, and adds the required `SchemeRoute` conformance automatically.
 `init?(url:)` 은 옵셔널 URL을 그대로 받아 nil 이면 초기화에 실패합니다.<br>
 `init?(url:)` accepts an optional URL and returns `nil` when the argument is `nil`.
 `SchemeRoute` 프로토콜의 기본 구현(`rawValue`, `init?(rawValue:)`, `init?(url:)`)도 자동으로 동작합니다.<br>
