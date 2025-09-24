@@ -2,7 +2,7 @@ import Foundation
 import SchemeRoute
 
 @SchemeRoutable
-enum DemoRoute: SchemeRoute, Equatable {
+enum DemoRoute: Equatable {
     @SchemePattern("")
     case home
 

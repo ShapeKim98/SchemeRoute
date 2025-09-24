@@ -14,7 +14,7 @@ struct SchemePatternMacro: PeerMacro {
     }
 }
 
-struct SchemeRoutableMacro: MemberMacro {
+struct SchemeRoutableMacro: MemberMacro, ExtensionMacro {
     static func expansion(
         of attribute: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
@@ -92,5 +92,29 @@ struct SchemeRoutableMacro: MemberMacro {
         """
 
         return [routerDecl]
+    }
+}
+
+extension SchemeRoutableMacro {
+    static func expansion(
+        of attribute: AttributeSyntax,
+        attachedTo declaration: some DeclGroupSyntax,
+        providingExtensionsOf type: some TypeSyntaxProtocol,
+        conformingTo protocols: [TypeSyntax],
+        in context: some MacroExpansionContext
+    ) throws -> [ExtensionDeclSyntax] {
+        _ = attribute
+        _ = protocols
+
+        guard let enumDecl = declaration.as(EnumDeclSyntax.self) else { return [] }
+        if let inherited = enumDecl.inheritanceClause?.inheritedTypes {
+            for type in inherited where type.type.trimmedDescription == "SchemeRoute" {
+                return []
+            }
+        }
+
+        let enumName = enumDecl.name
+        let extensionDecl = try ExtensionDeclSyntax("extension \(enumName): SchemeRoute {}")
+        return [extensionDecl]
     }
 }
