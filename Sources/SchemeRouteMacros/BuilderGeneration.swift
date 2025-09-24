@@ -1,7 +1,15 @@
 func generateBuilderCall(for info: CaseInfo) -> String {
     if info.parameters.isEmpty {
         let pathLiteral = info.pathTemplate.stringLiteral
-        return "builder.register(\(pathLiteral), route: .\(info.caseName))"
+        // Avoid using the Equatable-based helper because RawRepresentable routes compare via rawValue and recurse.
+        return """
+        builder.register(\(pathLiteral), match: { _ in
+            return .\(info.caseName)
+        }) { route in
+            guard case .\(info.caseName) = route else { return nil }
+            return [:]
+        }
+        """
     }
 
     let pathLiteral = info.pathTemplate.stringLiteral
