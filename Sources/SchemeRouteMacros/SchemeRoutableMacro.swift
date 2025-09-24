@@ -24,7 +24,7 @@ struct SchemeRoutableMacro: MemberMacro {
         _ = protocols
 
         guard let enumDecl = declaration.as(EnumDeclSyntax.self) else {
-            emitError("@SchemeRoutable 은 열거형에만 적용할 수 있습니다.", on: declaration, in: context)
+            emitError(localized(ko: "@SchemeRoutable 은 열거형에만 적용할 수 있습니다.", en: "The @SchemeRoutable attribute can only be applied to enums."), on: declaration, in: context)
             return []
         }
 
@@ -36,14 +36,14 @@ struct SchemeRoutableMacro: MemberMacro {
             guard let caseDecl = member.decl.as(EnumCaseDeclSyntax.self) else { continue }
 
             if caseDecl.elements.count > 1 {
-                emitError("각 case 선언에는 하나의 case 만 포함되어야 합니다.", on: caseDecl, in: context)
+                emitError(localized(ko: "각 case 선언에는 하나의 case 만 포함되어야 합니다.", en: "Each case declaration must contain exactly one case."), on: caseDecl, in: context)
                 hasError = true
                 continue
             }
 
             for element in caseDecl.elements {
                 guard let attribute = findRoutePatternAttribute(on: caseDecl) else {
-                    emitError("각 case 에 @RoutePattern(\"...\") 어노테이션을 지정해야 합니다.", on: element, in: context)
+                    emitError(localized(ko: "각 case 에 @RoutePattern(\"...\") 어노테이션을 지정해야 합니다.", en: "Each case must be annotated with @RoutePattern(\"...\")."), on: element, in: context)
                     hasError = true
                     continue
                 }
@@ -77,7 +77,7 @@ struct SchemeRoutableMacro: MemberMacro {
 
         if hasError { return [] }
         if builderCalls.isEmpty {
-            emitError("@SchemeRoutable 은 적어도 하나의 case 와 @RoutePattern 을 필요로 합니다.", on: declaration, in: context)
+            emitError(localized(ko: "@SchemeRoutable 은 적어도 하나의 case 와 @RoutePattern 을 필요로 합니다.", en: "@SchemeRoutable requires at least one case annotated with @RoutePattern."), on: declaration, in: context)
             return []
         }
 

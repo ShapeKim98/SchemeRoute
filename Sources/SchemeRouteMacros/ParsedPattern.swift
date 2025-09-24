@@ -32,12 +32,12 @@ struct ParsedPattern {
             let components = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
             let key = String(components.first ?? "")
             guard !key.isEmpty else {
-                throw SimpleError("쿼리 문자열에 키가 비어 있습니다: \(pair)")
+                throw SimpleError(ko: "쿼리 문자열에 키가 비어 있습니다: \(pair)", en: "Query string contains an empty key: \(pair)")
             }
 
             let value = components.count > 1 ? String(components[1]) : ""
             guard let placeholder = extractSinglePlaceholder(in: value) else {
-                throw SimpleError("쿼리 값은 반드시 ${name} 형식의 플레이스홀더여야 합니다: \(value)")
+                throw SimpleError(ko: "쿼리 값은 반드시 ${name} 형식의 플레이스홀더여야 합니다: \(value)", en: "Query value must use a ${name} placeholder: \(value)")
             }
             placeholders.append(QueryPlaceholder(key: key, placeholder: placeholder))
         }

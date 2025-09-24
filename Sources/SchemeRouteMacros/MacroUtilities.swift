@@ -27,7 +27,7 @@ func extractStringLiteral<C: MacroExpansionContext>(
           let literal = first.expression.as(StringLiteralExprSyntax.self),
           literal.segments.count == 1,
           let segment = literal.segments.first?.as(StringSegmentSyntax.self) else {
-        emitError("@RoutePattern 은 단일 문자열 리터럴을 인자로 받아야 합니다.", on: attribute, in: context)
+        emitError(localized(ko: "@RoutePattern 은 단일 문자열 리터럴을 인자로 받아야 합니다.", en: "@RoutePattern must take a single string literal argument."), on: attribute, in: context)
         return nil
     }
     return segment.content.text

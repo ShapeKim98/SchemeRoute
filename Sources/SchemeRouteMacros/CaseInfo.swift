@@ -34,10 +34,10 @@ struct CaseInfo {
         var pathBindings: [Binding] = []
         for placeholder in pattern.pathPlaceholders {
             guard let parameter = bindingsByPlaceholder[placeholder] else {
-                throw SimpleError("플레이스홀더 \(placeholder) 와 일치하는 연관값을 찾을 수 없습니다.")
+                throw SimpleError(ko: "플레이스홀더 \(placeholder) 와 일치하는 연관값을 찾을 수 없습니다.", en: "Could not find an associated value that matches the placeholder \(placeholder).")
             }
             if usedLabels.contains(parameter.label) {
-                throw SimpleError("연관값 \(parameter.label) 이 여러 플레이스홀더에 중복 매핑되었습니다.")
+                throw SimpleError(ko: "연관값 \(parameter.label) 이 여러 플레이스홀더에 중복 매핑되었습니다.", en: "Associated value \(parameter.label) is mapped to multiple placeholders.")
             }
             usedLabels.insert(parameter.label)
             pathBindings.append(Binding(dictionaryKey: placeholder, parameter: parameter))
@@ -46,10 +46,10 @@ struct CaseInfo {
         var queryBindings: [Binding] = []
         for item in pattern.queryPlaceholders {
             guard let parameter = bindingsByPlaceholder[item.placeholder] else {
-                throw SimpleError("플레이스홀더 \(item.placeholder) 와 일치하는 연관값을 찾을 수 없습니다.")
+                throw SimpleError(ko: "플레이스홀더 \(item.placeholder) 와 일치하는 연관값을 찾을 수 없습니다.", en: "Could not find an associated value that matches the placeholder \(item.placeholder).")
             }
             if usedLabels.contains(parameter.label) {
-                throw SimpleError("연관값 \(parameter.label) 이 여러 플레이스홀더에 중복 매핑되었습니다.")
+                throw SimpleError(ko: "연관값 \(parameter.label) 이 여러 플레이스홀더에 중복 매핑되었습니다.", en: "Associated value \(parameter.label) is mapped to multiple placeholders.")
             }
             usedLabels.insert(parameter.label)
             queryBindings.append(Binding(dictionaryKey: item.key, parameter: parameter))
@@ -58,7 +58,7 @@ struct CaseInfo {
         if !parameters.isEmpty && usedLabels.count != parameters.count {
             let unused = parameters.map { $0.label }.filter { !usedLabels.contains($0) }
             if let first = unused.first {
-                throw SimpleError("연관값 \(first) 에 대응하는 플레이스홀더가 없습니다.")
+                throw SimpleError(ko: "연관값 \(first) 에 대응하는 플레이스홀더가 없습니다.", en: "Associated value \(first) does not have a matching placeholder.")
             }
         }
 
@@ -74,20 +74,20 @@ struct CaseInfo {
 
         for parameter in parameterClause.parameters {
             if let second = parameter.secondName {
-                throw SimpleError("연관값에는 외부 라벨을 사용할 수 없습니다. 'case sample(id: String)' 형식을 사용해 주세요. 현재: \(second.text)")
+                throw SimpleError(ko: "연관값에는 외부 라벨을 사용할 수 없습니다. 'case sample(id: String)' 형식을 사용해 주세요. 현재: \(second.text)", en: "Associated values cannot use external labels. Use the form 'case sample(id: String)'. Found: \(second.text)")
             }
 
             guard let labelToken = parameter.firstName else {
-                throw SimpleError("연관값에는 라벨이 필요합니다. 예: case sample(id: String)")
+                throw SimpleError(ko: "연관값에는 라벨이 필요합니다. 예: case sample(id: String)", en: "Associated values must have a label. Example: case sample(id: String)")
             }
             let label = labelToken.text
             if label == "_" {
-                throw SimpleError("연관값 라벨에 '_' 는 사용할 수 없습니다. 별도의 이름을 지정해 주세요.")
+                throw SimpleError(ko: "연관값 라벨에 '_' 는 사용할 수 없습니다. 별도의 이름을 지정해 주세요.", en: "Associated value labels cannot be '_'. Provide a name.")
             }
 
             let typeDescription = parameter.type.trimmedDescription
             guard typeDescription == "String" else {
-                throw SimpleError("연관값 \(label) 은 String 타입이어야 합니다. 현재 타입: \(typeDescription)")
+                throw SimpleError(ko: "연관값 \(label) 은 String 타입이어야 합니다. 현재 타입: \(typeDescription)", en: "Associated value \(label) must be of type String. Found: \(typeDescription)")
             }
 
             parameters.append(Parameter(name: label, label: label, typeDescription: typeDescription))
