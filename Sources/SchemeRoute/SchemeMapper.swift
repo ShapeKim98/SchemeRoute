@@ -107,30 +107,48 @@ public final class SchemeMapper<Route> {
 
     public func url(for route: Route, scheme: String, host: String) -> URL? {
         guard let rawValue = rawValue(for: route) else { return nil }
+        let parts = rawValue.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+        let pathPart = parts.first ?? ""
+        let queryPart = parts.count > 1 ? parts[1] : nil
+
         var components = URLComponents()
         components.scheme = scheme
-        components.host = host
 
-        let parts = rawValue.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
-        if let path = parts.first {
-            components.path = path.isEmpty ? "/" : "/" + path
+        if pathPart.isEmpty {
+            components.host = host
+            components.path = "/"
+        } else {
+            if pathPart.contains("/") {
+                components.host = host
+                components.path = "/" + pathPart
+            } else {
+                components.host = pathPart
+                components.path = ""
+            }
         }
-        if parts.count > 1 {
-            components.percentEncodedQuery = parts[1]
+
+        if let queryPart {
+            components.percentEncodedQuery = queryPart
         }
         return components.url
     }
 
     public static func normalize(url: URL) -> String {
         let trimmedPath = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let effectivePath: String
+        if trimmedPath.isEmpty, let host = url.host, !host.isEmpty {
+            effectivePath = host
+        } else {
+            effectivePath = trimmedPath
+        }
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let sortedItems = (components?.queryItems ?? []).sorted { $0.name < $1.name }
         components?.queryItems = sortedItems.isEmpty ? nil : sortedItems
         let query = components?.percentEncodedQuery
         if let query, !query.isEmpty {
-            return trimmedPath.isEmpty ? "?\(query)" : "\(trimmedPath)?\(query)"
+            return effectivePath.isEmpty ? "?\(query)" : "\(effectivePath)?\(query)"
         } else {
-            return trimmedPath
+            return effectivePath
         }
     }
 
