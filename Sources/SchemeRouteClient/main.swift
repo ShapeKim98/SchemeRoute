@@ -3,16 +3,16 @@ import SchemeRoute
 
 @SchemeRoutable
 enum DemoRoute: SchemeRoute, Equatable {
-    @RoutePattern("")
+    @SchemePattern("")
     case home
 
-    @RoutePattern("user/${id}/profile")
+    @SchemePattern("user/${id}/profile")
     case userProfile(id: String)
 
-    @RoutePattern("article/${slug}")
+    @SchemePattern("article/${slug}")
     case article(slug: String)
 
-    @RoutePattern("pay/complete?order_id=${orderId}")
+    @SchemePattern("pay/complete?order_id=${orderId}")
     case payComplete(orderId: String)
 }
 

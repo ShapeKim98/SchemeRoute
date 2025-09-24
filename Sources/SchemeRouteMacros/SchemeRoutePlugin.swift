@@ -5,6 +5,6 @@ import SwiftSyntaxMacros
 struct SchemeRoutePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         SchemeRoutableMacro.self,
-        RoutePatternMacro.self,
+        SchemePatternMacro.self,
     ]
 }

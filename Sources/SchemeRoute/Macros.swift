@@ -2,4 +2,4 @@
 public macro SchemeRoutable() = #externalMacro(module: "SchemeRouteMacros", type: "SchemeRoutableMacro")
 
 @attached(peer)
-public macro RoutePattern(_ pattern: String) = #externalMacro(module: "SchemeRouteMacros", type: "RoutePatternMacro")
+public macro SchemePattern(_ pattern: String) = #externalMacro(module: "SchemeRouteMacros", type: "SchemePatternMacro")

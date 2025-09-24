@@ -3,7 +3,7 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-struct RoutePatternMacro: PeerMacro {
+struct SchemePatternMacro: PeerMacro {
     static func expansion(
         of node: AttributeSyntax,
         providingPeersOf declaration: some DeclSyntaxProtocol,
@@ -42,8 +42,8 @@ struct SchemeRoutableMacro: MemberMacro {
             }
 
             for element in caseDecl.elements {
-                guard let attribute = findRoutePatternAttribute(on: caseDecl) else {
-                    emitError(localized(ko: "각 case 에 @RoutePattern(\"...\") 어노테이션을 지정해야 합니다.", en: "Each case must be annotated with @RoutePattern(\"...\")."), on: element, in: context)
+                guard let attribute = findSchemePatternAttribute(on: caseDecl) else {
+                    emitError(localized(ko: "각 case 에 @SchemePattern(\"...\") 어노테이션을 지정해야 합니다.", en: "Each case must be annotated with @SchemePattern(\"...\")."), on: element, in: context)
                     hasError = true
                     continue
                 }
@@ -77,7 +77,7 @@ struct SchemeRoutableMacro: MemberMacro {
 
         if hasError { return [] }
         if builderCalls.isEmpty {
-            emitError(localized(ko: "@SchemeRoutable 은 적어도 하나의 case 와 @RoutePattern 을 필요로 합니다.", en: "@SchemeRoutable requires at least one case annotated with @RoutePattern."), on: declaration, in: context)
+            emitError(localized(ko: "@SchemeRoutable 은 적어도 하나의 case 와 @SchemePattern 을 필요로 합니다.", en: "@SchemeRoutable requires at least one case annotated with @SchemePattern."), on: declaration, in: context)
             return []
         }
 
