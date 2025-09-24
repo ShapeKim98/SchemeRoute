@@ -13,9 +13,9 @@ public extension SchemeRoute {
         self = route
     }
 
-    /// URL → 라우트 변환 기본 구현
-    init?(url: URL) {
-        guard let route = Self.router.route(from: url) else { return nil }
+    /// URL → 라우트 변환 기본 구현 (nil 입력 시 실패)
+    init?(url: URL?) {
+        guard let url, let route = Self.router.route(from: url) else { return nil }
         self = route
     }
 
