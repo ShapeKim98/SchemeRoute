@@ -86,7 +86,12 @@ struct SchemeRoutableMacro: MemberMacro, ExtensionMacro {
             .joined(separator: "\n\n")
 
         let routerDecl: DeclSyntax = """
-        static let router = SchemeMapper<\(raw: enumName)> { builder in
+        static let router = SchemeMapper<\(raw: enumName)>(
+            defaultScheme: Self.scheme.isEmpty ? nil : Self.scheme,
+            defaultHost: Self.host.isEmpty ? nil : Self.host,
+            includesSchemeInTemplate: Self.scheme.isEmpty,
+            includesHostInTemplate: Self.host.isEmpty
+        ) { builder in
         \(raw: body)
         }
         """
