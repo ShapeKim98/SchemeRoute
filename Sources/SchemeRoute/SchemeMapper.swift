@@ -69,18 +69,50 @@ public final class SchemeMapper<Route> {
     }
 
     private let patterns: [Pattern]
+    private let defaultScheme: String?
+    private let defaultHost: String?
+    private let includesSchemeInTemplate: Bool
+    private let includesHostInTemplate: Bool
 
-    public init(patterns: [Pattern]) {
+    public init(
+        patterns: [Pattern],
+        defaultScheme: String? = nil,
+        defaultHost: String? = nil,
+        includesSchemeInTemplate: Bool = false,
+        includesHostInTemplate: Bool = true
+    ) {
         self.patterns = patterns
+        self.defaultScheme = defaultScheme.nonEmpty
+        self.defaultHost = defaultHost.nonEmpty
+        self.includesSchemeInTemplate = includesSchemeInTemplate
+        self.includesHostInTemplate = includesHostInTemplate
     }
 
-    public convenience init(_ configure: (inout Builder) -> Void) {
+    public convenience init(
+        defaultScheme: String? = nil,
+        defaultHost: String? = nil,
+        includesSchemeInTemplate: Bool = false,
+        includesHostInTemplate: Bool = true,
+        _ configure: (inout Builder) -> Void
+    ) {
         var builder = Builder()
         configure(&builder)
-        self.init(patterns: builder.patterns)
+        self.init(
+            patterns: builder.patterns,
+            defaultScheme: defaultScheme,
+            defaultHost: defaultHost,
+            includesSchemeInTemplate: includesSchemeInTemplate,
+            includesHostInTemplate: includesHostInTemplate
+        )
     }
 
     public func route(from rawValue: String) -> Route? {
+        if !includesSchemeInTemplate,
+           rawValue.contains("://"),
+           let url = URL(string: rawValue) {
+            return route(from: url)
+        }
+
         let (path, query) = Self.split(rawValue: rawValue)
         for pattern in patterns {
             guard let params = pattern.matcher.match(path: path, query: query) else { continue }
@@ -92,8 +124,12 @@ public final class SchemeMapper<Route> {
     }
 
     public func route(from url: URL) -> Route? {
-        let normalized = Self.normalize(url: url)
-        return route(from: normalized)
+        for candidate in normalizedCandidates(from: url) {
+            if let route = route(from: candidate) {
+                return route
+            }
+        }
+        return nil
     }
 
     public func rawValue(for route: Route) -> String? {
@@ -105,25 +141,37 @@ public final class SchemeMapper<Route> {
         return nil
     }
 
-    public func url(for route: Route, scheme: String, host: String) -> URL? {
+    public func url(for route: Route, scheme: String?, host: String?) -> URL? {
         guard let rawValue = rawValue(for: route) else { return nil }
+
+        if let components = URLComponents(string: rawValue), components.scheme != nil {
+            return components.url
+        }
+
         let parts = rawValue.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
         let pathPart = parts.first ?? ""
         let queryPart = parts.count > 1 ? parts[1] : nil
 
         var components = URLComponents()
-        components.scheme = scheme
+        let effectiveScheme = scheme ?? defaultScheme
+        let effectiveHost = host ?? defaultHost
+        components.scheme = effectiveScheme
 
-        if pathPart.isEmpty {
-            components.host = host
-            components.path = "/"
-        } else {
-            if pathPart.contains("/") {
-                components.host = host
-                components.path = "/" + pathPart
+        if includesHostInTemplate {
+            let decomposition = Self.decomposeHostAndPath(from: pathPart)
+            if let explicitHost = decomposition.host {
+                components.host = explicitHost
+                components.path = decomposition.path.isEmpty ? "" : "/" + decomposition.path
             } else {
-                components.host = pathPart
-                components.path = ""
+                components.host = effectiveHost
+                components.path = decomposition.path.isEmpty ? "/" : "/" + decomposition.path
+            }
+        } else {
+            components.host = effectiveHost
+            if pathPart.hasPrefix("/") {
+                components.path = pathPart
+            } else {
+                components.path = pathPart.isEmpty ? "" : "/" + pathPart
             }
         }
 
@@ -134,22 +182,12 @@ public final class SchemeMapper<Route> {
     }
 
     public static func normalize(url: URL) -> String {
-        let trimmedPath = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let effectivePath: String
-        if trimmedPath.isEmpty, let host = url.host, !host.isEmpty {
-            effectivePath = host
-        } else {
-            effectivePath = trimmedPath
+        guard let components = normalizedComponents(for: url) else {
+            return url.absoluteString
         }
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        let sortedItems = (components?.queryItems ?? []).sorted { $0.name < $1.name }
-        components?.queryItems = sortedItems.isEmpty ? nil : sortedItems
-        let query = components?.percentEncodedQuery
-        if let query, !query.isEmpty {
-            return effectivePath.isEmpty ? "?\(query)" : "\(effectivePath)?\(query)"
-        } else {
-            return effectivePath
-        }
+
+        let hostPrefixed = hostPrefixedPath(from: components)
+        return appendQuery(components.percentEncodedQuery, to: hostPrefixed)
     }
 
     private static func split(rawValue: String) -> (path: String, query: [String: String]) {
@@ -180,5 +218,124 @@ public final class SchemeMapper<Route> {
             return encodedQuery.isEmpty ? path : "?\(encodedQuery)"
         }
         return encodedQuery.isEmpty ? path : "\(path)?\(encodedQuery)"
+    }
+
+    private func normalizedCandidates(from url: URL) -> [String] {
+        guard let components = Self.normalizedComponents(for: url) else {
+            return [url.absoluteString]
+        }
+
+        if let expectedScheme = defaultScheme,
+           let actualScheme = components.scheme,
+           !Self.caseInsensitiveEqual(expectedScheme, actualScheme) {
+            return []
+        }
+
+        if !includesHostInTemplate,
+           let expectedHost = defaultHost,
+           let actualHost = components.host,
+           !actualHost.isEmpty,
+           !Self.caseInsensitiveEqual(expectedHost, actualHost) {
+            return []
+        }
+
+        let hostPrefixed = Self.hostPrefixedPath(from: components)
+        let pathOnly = Self.trimmedPath(from: components)
+        let hostOnly = components.host ?? ""
+        let query = components.percentEncodedQuery
+
+        var results: [String] = []
+
+        if includesSchemeInTemplate, let absolute = components.url?.absoluteString {
+            results.append(absolute)
+        }
+
+        let hostCandidate = Self.appendQuery(query, to: hostPrefixed)
+        if includesHostInTemplate, !hostCandidate.isEmpty {
+            results.append(hostCandidate)
+        }
+
+        let pathCandidate = Self.appendQuery(query, to: pathOnly)
+        if !pathCandidate.isEmpty || !results.contains(pathCandidate) {
+            if !results.contains(pathCandidate) {
+                results.append(pathCandidate)
+            }
+        }
+
+        if includesHostInTemplate, pathOnly.isEmpty, !hostOnly.isEmpty {
+            let hostOnlyCandidate = Self.appendQuery(query, to: hostOnly)
+            if !hostOnlyCandidate.isEmpty, !results.contains(hostOnlyCandidate) {
+                results.append(hostOnlyCandidate)
+            }
+        }
+
+        if results.isEmpty {
+            if let query, !query.isEmpty {
+                results.append("?\(query)")
+            } else {
+                results.append("")
+            }
+        }
+
+        return results
+    }
+
+    private static func normalizedComponents(for url: URL) -> URLComponents? {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return nil
+        }
+        let sortedItems = (components.queryItems ?? []).sorted { $0.name < $1.name }
+        components.queryItems = sortedItems.isEmpty ? nil : sortedItems
+        components.fragment = nil
+        return components
+    }
+
+    private static func hostPrefixedPath(from components: URLComponents) -> String {
+        let host = components.host ?? ""
+        let trimmed = trimmedPath(from: components)
+        if host.isEmpty { return trimmed }
+        if trimmed.isEmpty { return host }
+        return "\(host)/\(trimmed)"
+    }
+
+    private static func trimmedPath(from components: URLComponents) -> String {
+        components.percentEncodedPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+
+    private static func appendQuery(_ query: String?, to base: String) -> String {
+        guard let query, !query.isEmpty else { return base }
+        if base.isEmpty {
+            return "?\(query)"
+        }
+        return "\(base)?\(query)"
+    }
+
+    private static func decomposeHostAndPath(from rawPath: String) -> (host: String?, path: String) {
+        guard !rawPath.isEmpty else { return (nil, "") }
+        if rawPath.hasPrefix("/") {
+            let trimmed = rawPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            return (nil, trimmed)
+        }
+
+        let segments = rawPath.split(separator: "/", omittingEmptySubsequences: false)
+        guard let first = segments.first else { return (nil, "") }
+        if segments.count == 1 {
+            return (String(first), "")
+        }
+        let remaining = segments.dropFirst().map(String.init).joined(separator: "/")
+        return (String(first), remaining)
+    }
+}
+
+private extension Optional where Wrapped == String {
+    var nonEmpty: String? {
+        guard let value = self, !value.isEmpty else { return nil }
+        return value
+    }
+}
+
+private extension SchemeMapper {
+    static func caseInsensitiveEqual(_ lhs: String, _ rhs: String) -> Bool {
+        lhs.caseInsensitiveCompare(rhs) == .orderedSame
     }
 }

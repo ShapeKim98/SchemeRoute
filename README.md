@@ -20,11 +20,11 @@ Requirements
 ## 설치 (Swift Package Manager)
 Installation (Swift Package Manager)
 
-`Package.swift` 의 `dependencies` 배열에 `SchemeRoute` 를 최신 버전으로 추가합니다 (현재 0.1.1).<br>
-Add `SchemeRoute` to the `dependencies` array in `Package.swift` with the latest version (currently 0.1.1).
+`Package.swift` 의 `dependencies` 배열에 `SchemeRoute` 를 최신 버전으로 추가합니다 (현재 0.2.0).<br>
+Add `SchemeRoute` to the `dependencies` array in `Package.swift` with the latest version (currently 0.2.0).
 
 ```swift
-.package(url: "https://github.com/ShapeKim98/SchemeRoute.git", from: "0.1.1")
+.package(url: "https://github.com/ShapeKim98/SchemeRoute.git", from: "0.2.0")
 ```
 
 사용할 타깃의 `dependencies` 에 `SchemeRoute` 를 명시합니다.<br>
@@ -50,6 +50,9 @@ import SchemeRoute
 
 @SchemeRoutable
 enum AppRoute: Equatable {
+    static var scheme: String { "myapp" }
+    static var host: String { "app" }
+
     @SchemePattern("")
     case home
 
@@ -60,16 +63,37 @@ enum AppRoute: Equatable {
     case article(slug: String, ref: String)
 }
 
-// 문자열 → 라우트
+// 문자열 → 라우트 (호스트는 기본값으로 분리)
 let route = AppRoute(rawValue: "user/42/profile")
 // URL → 라우트
 let fromURL = AppRoute(url: URL(string: "myapp://app/article/swift?ref=newsletter"))
 // 라우트 → URL
-let url = AppRoute.article(slug: "swift", ref: "newsletter").url(scheme: "myapp", host: "app")
+let url = AppRoute.article(slug: "swift", ref: "newsletter").url()
 ```
 
-`@SchemeRoutable` 매크로는 `enum` 내 모든 케이스를 스캔해 `SchemeMapper<AppRoute>` 를 생성하고 필요한 `SchemeRoute` 채택도 자동으로 추가합니다.<br>
-The `@SchemeRoutable` macro scans every case, generates a `SchemeMapper<AppRoute>`, and adds the required `SchemeRoute` conformance automatically.
+### 스킴/호스트 없이 선언하기
+
+기본 스킴/호스트를 지정하지 않으면 패턴 문자열 안에 호스트(필요하다면 스킴까지)를 직접 포함할 수 있습니다. 기존 iOS/웹 URL을 그대로 다뤄야 할 때 유용합니다.
+
+```swift
+@SchemeRoutable
+enum InlineRoute: Equatable {
+    @SchemePattern("kakaolink?categoryId=${categoryId}")
+    case kakaolink(categoryId: String)
+
+    @SchemePattern("inline.app/user/${id}/profile")
+    case inlineProfile(id: String)
+}
+
+let inline = InlineRoute(rawValue: "inline.app/user/42/profile")
+let kakao = InlineRoute(url: URL(string: "kakaoapp://kakaolink?categoryId=424"))
+let deepURL = InlineRoute.inlineProfile(id: "42").url(scheme: "myapp")
+```
+
+패턴에 포함된 호스트는 그대로 유지되며, `url(scheme:)` 을 통해 런타임에서 필요한 스킴을 주입할 수 있습니다.
+
+`@SchemeRoutable` 매크로는 `enum` 내 모든 케이스를 스캔하여 `SchemeMapper<AppRoute>` 를 생성합니다.<br>
+The `@SchemeRoutable` macro scans every case in the `enum` and generates a `SchemeMapper<AppRoute>`.
 `init?(url:)` 은 옵셔널 URL을 그대로 받아 nil 이면 초기화에 실패합니다.<br>
 `init?(url:)` accepts an optional URL and returns `nil` when the argument is `nil`.
 `SchemeRoute` 프로토콜의 기본 구현(`rawValue`, `init?(rawValue:)`, `init?(url:)`)도 자동으로 동작합니다.<br>
@@ -78,8 +102,8 @@ The default `SchemeRoute` implementations (`rawValue`, `init?(rawValue:)`, `init
 ## 패턴 작성 규칙
 Pattern Rules
 
-- 패턴 문자열은 `path?query` 형태이며, 쿼리 문자열은 선택입니다.<br>
-  Pattern strings follow `path?query`, and the query component is optional.
+- 패턴 문자열은 기본적으로 `path?query` 형태입니다. `SchemeRoute.host` 나 `SchemeRoute.scheme` 가 비어 있으면 직접 호스트(및 스킴)을 포함시킬 수 있습니다.<br>
+  Pattern strings are `path?query` by default. When `SchemeRoute.host` or `SchemeRoute.scheme` are empty, you may inline the host (and scheme) manually.
 - 경로와 쿼리에서 값이 되는 부분은 `${name}` 플레이스홀더로 표기합니다.<br>
   Use `${name}` placeholders wherever the path or query should inject values.
     - 경로 예: `user/${id}/profile`<br>
@@ -92,6 +116,8 @@ Pattern Rules
   The same associated value cannot be used more than once, and unused associated values trigger an error.
 - 외부 라벨이 붙은 연관값(`case article(slug slug: String)`)은 지원하지 않습니다.<br>
   Associated values with external labels (e.g. `case article(slug slug: String)`) are not supported.
+- `SchemeRoute.scheme`/`host` 가 지정되어 있다면 `url()` 호출 시 기본값으로 사용됩니다. 필요하면 `url(scheme:host:)` 에서 값을 덮어쓸 수 있습니다.<br>
+  When `SchemeRoute.scheme`/`host` are set, `url()` uses them automatically; override them by passing arguments to `url(scheme:host:)` when needed.
 
 ## 수동 라우터 구성
 Manual Router Configuration

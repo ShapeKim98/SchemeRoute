@@ -4,9 +4,18 @@ import Foundation
 public protocol SchemeRoute: RawRepresentable where RawValue == String {
     /// 해당 라우트를 파싱/생성하기 위한 매퍼
     static var router: SchemeMapper<Self> { get }
+
+    /// 라우트 전용 기본 스킴 (없으면 빈 문자열)
+    static var scheme: String { get }
+
+    /// 라우트 전용 기본 호스트 (없으면 빈 문자열)
+    static var host: String { get }
 }
 
 public extension SchemeRoute {
+    static var scheme: String { "" }
+    static var host: String { "" }
+
     /// 기본 문자열(rawValue) → 라우트 변환 기본 구현
     init?(rawValue: String) {
         guard let route = Self.router.route(from: rawValue) else { return nil }
@@ -29,7 +38,9 @@ public extension SchemeRoute {
     }
 
     /// 라우트를 URL 로 변환 (스킴/호스트는 상황에 맞게 지정)
-    func url(scheme: String = "myapp", host: String = "app") -> URL? {
-        Self.router.url(for: self, scheme: scheme, host: host)
+    func url(scheme: String? = nil, host: String? = nil) -> URL? {
+        let resolvedScheme = scheme ?? (Self.scheme.isEmpty ? nil : Self.scheme)
+        let resolvedHost = host ?? (Self.host.isEmpty ? nil : Self.host)
+        return Self.router.url(for: self, scheme: resolvedScheme, host: resolvedHost)
     }
 }

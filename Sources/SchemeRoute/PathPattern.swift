@@ -21,7 +21,10 @@ public struct PathPattern {
 
     /// path 와 query 가 패턴에 매칭되는 경우 파라미터 딕셔너리를 반환
     public func match(path: String, query: [String: String]) -> [String: String]? {
-        let pathParts = path.split(separator: "/").map(String.init)
+        var pathParts = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+        if pathParts.count == 1, pathParts.first?.isEmpty == true {
+            pathParts = []
+        }
         guard pathParts.count == segments.count else { return nil }
 
         var params: [String: String] = [:]
@@ -67,7 +70,7 @@ public struct PathPattern {
 
     private static func normalizePlaceholders(in template: String) -> String {
         guard !template.isEmpty else { return template }
-        let segments = template.split(separator: "/").map { rawSegment -> String in
+        let segments = template.split(separator: "/", omittingEmptySubsequences: false).map { rawSegment -> String in
             let segment = String(rawSegment)
             if let colonName = placeholderNameFromColon(segment) {
                 return "${\(colonName)}"
@@ -79,7 +82,7 @@ public struct PathPattern {
 
     private static func parseSegments(from template: String) -> [Segment] {
         guard !template.isEmpty else { return [] }
-        return template.split(separator: "/").map { rawSegment -> Segment in
+        return template.split(separator: "/", omittingEmptySubsequences: false).map { rawSegment -> Segment in
             let segment = String(rawSegment)
             if let name = placeholderName(in: segment) {
                 return .parameter(name)
