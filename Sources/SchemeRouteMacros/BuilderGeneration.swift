@@ -26,16 +26,25 @@ func generateBuilderCall(for info: CaseInfo) -> String {
 
     let allBindings = info.pathBindings + info.queryBindings
     if !allBindings.isEmpty {
-        if allBindings.count == 1 {
-            let binding = allBindings[0]
-            lines.append("    guard let \(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)] else { return nil }")
-        } else {
-            lines.append("    guard")
-            for (index, binding) in allBindings.enumerated() {
-                let suffix = index == allBindings.count - 1 ? "" : ","
-                lines.append("        let \(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)]\(suffix)")
+        let nonOptionalBindings = allBindings.filter { !$0.parameter.typeDescription.hasSuffix("?") }
+        let optionalBindings = allBindings.filter { $0.parameter.typeDescription.hasSuffix("?") }
+
+        if !nonOptionalBindings.isEmpty {
+            if nonOptionalBindings.count == 1 {
+                let binding = nonOptionalBindings[0]
+                lines.append("    guard let \(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)] else { return nil }")
+            } else {
+                lines.append("    guard")
+                for (index, binding) in nonOptionalBindings.enumerated() {
+                    let suffix = index == nonOptionalBindings.count - 1 ? "" : ","
+                    lines.append("        let \(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)]\(suffix)")
+                }
+                lines.append("    else { return nil }")
             }
-            lines.append("    else { return nil }")
+        }
+
+        for binding in optionalBindings {
+            lines.append("    let \(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)].flatMap { $0.isEmpty ? nil : $0 }")
         }
     }
 
@@ -50,8 +59,13 @@ func generateBuilderCall(for info: CaseInfo) -> String {
         .joined(separator: ", ")
     lines.append("    guard case let .\(info.caseName)(\(patternArguments)) = route else { return nil }")
 
-    let dictionaryEntries = (info.pathBindings.map { "\($0.dictionaryKey.stringLiteral): \($0.parameter.name)" } +
-                             info.queryBindings.map { "\($0.dictionaryKey.stringLiteral): \($0.parameter.name)" })
+    let dictionaryEntries = (info.pathBindings.map { binding in
+        let value = binding.parameter.typeDescription.hasSuffix("?") ? "\(binding.parameter.name) ?? \"\"" : binding.parameter.name
+        return "\(binding.dictionaryKey.stringLiteral): \(value)"
+    } + info.queryBindings.map { binding in
+        let value = binding.parameter.typeDescription.hasSuffix("?") ? "\(binding.parameter.name) ?? \"\"" : binding.parameter.name
+        return "\(binding.dictionaryKey.stringLiteral): \(value)"
+    })
 
     if dictionaryEntries.isEmpty {
         lines.append("    return [:]")

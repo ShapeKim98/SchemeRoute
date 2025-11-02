@@ -86,8 +86,8 @@ struct CaseInfo {
             }
 
             let typeDescription = parameter.type.trimmedDescription
-            guard typeDescription == "String" else {
-                throw SimpleError(ko: "연관값 \(label) 은 String 타입이어야 합니다. 현재 타입: \(typeDescription)", en: "Associated value \(label) must be of type String. Found: \(typeDescription)")
+            guard typeDescription == "String" || typeDescription == "String?" else {
+                throw SimpleError(ko: "연관값 \(label) 은 String 또는 String? 타입이어야 합니다. 현재 타입: \(typeDescription)", en: "Associated value \(label) must be of type String or String?. Found: \(typeDescription)")
             }
 
             parameters.append(Parameter(name: label, label: label, typeDescription: typeDescription))

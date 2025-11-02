@@ -17,6 +17,9 @@ enum DemoRoute: Equatable {
 
     @SchemePattern("pay/complete?order_id=${orderId}")
     case payComplete(orderId: String)
+
+    @SchemePattern("search?query=${query}&filter=${filter}")
+    case search(query: String, filter: String?)
 }
 
 @SchemeRoutable
@@ -106,6 +109,26 @@ verifyURL("myapp://app/user/42/profile", equals: DemoRoute.userProfile(id: "42")
 verifyURL("myapp://app/pay/complete?order_id=XYZ123", equals: DemoRoute.payComplete(orderId: "XYZ123"))
 verifyURL("myapp://app/pay/complete", equals: DemoRoute.payComplete(orderId: "XYZ123"))
 verifyURL("myapp://app/pay/complete?order=XYZ123", equals: DemoRoute.payComplete(orderId: "XYZ123"))
+
+print("\n=== 옵셔널 쿼리 파라미터 테스트 ===")
+printMatch("search?query=swift", as: DemoRoute.self)
+printMatch("search?query=swift&filter=", as: DemoRoute.self)
+printMatch("search?query=swift&filter=recent", as: DemoRoute.self)
+verifyURL("myapp://app/search?query=swift", equals: DemoRoute.search(query: "swift", filter: nil))
+verifyURL("myapp://app/search?query=swift&filter=", equals: DemoRoute.search(query: "swift", filter: nil))
+verifyURL("myapp://app/search?query=swift&filter=recent", equals: DemoRoute.search(query: "swift", filter: "recent"))
+
+if let searchURL = DemoRoute.search(query: "swift", filter: nil).url() {
+    print("route -> URL: search(query: swift, filter: nil) => \(searchURL.absoluteString)")
+} else {
+    printWarning("route -> URL: search(query: swift, filter: nil) 생성 실패")
+}
+
+if let searchURL = DemoRoute.search(query: "swift", filter: "recent").url() {
+    print("route -> URL: search(query: swift, filter: recent) => \(searchURL.absoluteString)")
+} else {
+    printWarning("route -> URL: search(query: swift, filter: recent) 생성 실패")
+}
 
 print("\n=== InlineRoute 예시 (기본 스킴/호스트 없음) ===")
 printMatch("kakaolink?categoryId=424", as: InlineRoute.self, label: "InlineRoute")
