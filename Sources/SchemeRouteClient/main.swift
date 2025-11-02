@@ -20,6 +20,12 @@ enum DemoRoute: Equatable {
 
     @SchemePattern("search?query=${query}&filter=${filter}")
     case search(query: String, filter: String?)
+
+    @SchemePattern("user/${id}/posts?page=${page}&premium=${premium}")
+    case userPosts(id: Int, page: Int, premium: Bool)
+
+    @SchemePattern("product/${productId}?discount=${discount}&quantity=${quantity}")
+    case product(productId: String, discount: Double?, quantity: Int?)
 }
 
 @SchemeRoutable
@@ -128,6 +134,42 @@ if let searchURL = DemoRoute.search(query: "swift", filter: "recent").url() {
     print("route -> URL: search(query: swift, filter: recent) => \(searchURL.absoluteString)")
 } else {
     printWarning("route -> URL: search(query: swift, filter: recent) 생성 실패")
+}
+
+print("\n=== LosslessStringConvertible 타입 테스트 ===")
+printMatch("user/123/posts?page=2&premium=true", as: DemoRoute.self)
+printMatch("user/123/posts?page=2&premium=false", as: DemoRoute.self)
+printMatch("user/abc/posts?page=2&premium=true", as: DemoRoute.self)
+printURL("myapp://app/user/456/posts?page=3&premium=true", as: DemoRoute.self)
+printURL("myapp://app/user/456/posts?page=abc&premium=true", as: DemoRoute.self)
+verifyURL("myapp://app/user/123/posts?page=2&premium=true", equals: DemoRoute.userPosts(id: 123, page: 2, premium: true))
+verifyURL("myapp://app/user/123/posts?page=2&premium=false", equals: DemoRoute.userPosts(id: 123, page: 2, premium: false))
+
+if let postsURL = DemoRoute.userPosts(id: 999, page: 5, premium: true).url() {
+    print("route -> URL: userPosts => \(postsURL.absoluteString)")
+} else {
+    printWarning("route -> URL: userPosts 생성 실패")
+}
+
+print("\n=== 옵셔널 타입 변환 테스트 ===")
+printMatch("product/ABC123?discount=0.15&quantity=10", as: DemoRoute.self)
+printMatch("product/ABC123?discount=0.15&quantity=", as: DemoRoute.self)
+printMatch("product/ABC123?discount=&quantity=10", as: DemoRoute.self)
+printMatch("product/ABC123", as: DemoRoute.self)
+verifyURL("myapp://app/product/XYZ?discount=0.25&quantity=5", equals: DemoRoute.product(productId: "XYZ", discount: 0.25, quantity: 5))
+verifyURL("myapp://app/product/XYZ?discount=0.25", equals: DemoRoute.product(productId: "XYZ", discount: 0.25, quantity: nil))
+verifyURL("myapp://app/product/XYZ", equals: DemoRoute.product(productId: "XYZ", discount: nil, quantity: nil))
+
+if let productURL1 = DemoRoute.product(productId: "TEST", discount: 0.5, quantity: 100).url() {
+    print("route -> URL: product(discount: 0.5, quantity: 100) => \(productURL1.absoluteString)")
+} else {
+    printWarning("route -> URL: product 생성 실패")
+}
+
+if let productURL2 = DemoRoute.product(productId: "TEST", discount: nil, quantity: nil).url() {
+    print("route -> URL: product(discount: nil, quantity: nil) => \(productURL2.absoluteString)")
+} else {
+    printWarning("route -> URL: product 생성 실패")
 }
 
 print("\n=== InlineRoute 예시 (기본 스킴/호스트 없음) ===")

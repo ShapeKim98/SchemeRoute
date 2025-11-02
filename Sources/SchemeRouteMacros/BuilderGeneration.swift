@@ -1,3 +1,24 @@
+private func encodeBinding(_ binding: CaseInfo.Binding) -> String {
+    let key = binding.dictionaryKey.stringLiteral
+    let param = binding.parameter
+
+    if param.isString {
+        // String 타입
+        if param.isOptional {
+            return "\(key): \(param.name) ?? \"\""
+        } else {
+            return "\(key): \(param.name)"
+        }
+    } else {
+        // 기타 타입 (LosslessStringConvertible)
+        if param.isOptional {
+            return "\(key): \(param.name).map(String.init) ?? \"\""
+        } else {
+            return "\(key): String(\(param.name))"
+        }
+    }
+}
+
 func generateBuilderCall(for info: CaseInfo) -> String {
     if info.parameters.isEmpty {
         let pathLiteral = info.pathTemplate.stringLiteral
@@ -26,25 +47,44 @@ func generateBuilderCall(for info: CaseInfo) -> String {
 
     let allBindings = info.pathBindings + info.queryBindings
     if !allBindings.isEmpty {
-        let nonOptionalBindings = allBindings.filter { !$0.parameter.typeDescription.hasSuffix("?") }
-        let optionalBindings = allBindings.filter { $0.parameter.typeDescription.hasSuffix("?") }
+        let nonOptionalBindings = allBindings.filter { !$0.parameter.isOptional }
+        let optionalBindings = allBindings.filter { $0.parameter.isOptional }
 
+        // 비옵셔널 바인딩 처리
         if !nonOptionalBindings.isEmpty {
             if nonOptionalBindings.count == 1 {
                 let binding = nonOptionalBindings[0]
-                lines.append("    guard let \(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)] else { return nil }")
+                lines.append("    guard let __str_\(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)] else { return nil }")
+                if binding.parameter.isString {
+                    lines.append("    let \(binding.parameter.name) = __str_\(binding.parameter.name)")
+                } else {
+                    lines.append("    guard let \(binding.parameter.name) = \(binding.parameter.unwrappedType)(__str_\(binding.parameter.name)) else { return nil }")
+                }
             } else {
                 lines.append("    guard")
                 for (index, binding) in nonOptionalBindings.enumerated() {
                     let suffix = index == nonOptionalBindings.count - 1 ? "" : ","
-                    lines.append("        let \(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)]\(suffix)")
+                    lines.append("        let __str_\(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)]\(suffix)")
                 }
                 lines.append("    else { return nil }")
+
+                for binding in nonOptionalBindings {
+                    if binding.parameter.isString {
+                        lines.append("    let \(binding.parameter.name) = __str_\(binding.parameter.name)")
+                    } else {
+                        lines.append("    guard let \(binding.parameter.name) = \(binding.parameter.unwrappedType)(__str_\(binding.parameter.name)) else { return nil }")
+                    }
+                }
             }
         }
 
+        // 옵셔널 바인딩 처리
         for binding in optionalBindings {
-            lines.append("    let \(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)].flatMap { $0.isEmpty ? nil : $0 }")
+            if binding.parameter.unwrappedType == "String" {
+                lines.append("    let \(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)].flatMap { $0.isEmpty ? nil : $0 }")
+            } else {
+                lines.append("    let \(binding.parameter.name) = params[\(binding.dictionaryKey.stringLiteral)].flatMap { $0.isEmpty ? nil : \(binding.parameter.unwrappedType)($0) }")
+            }
         }
     }
 
@@ -60,11 +100,9 @@ func generateBuilderCall(for info: CaseInfo) -> String {
     lines.append("    guard case let .\(info.caseName)(\(patternArguments)) = route else { return nil }")
 
     let dictionaryEntries = (info.pathBindings.map { binding in
-        let value = binding.parameter.typeDescription.hasSuffix("?") ? "\(binding.parameter.name) ?? \"\"" : binding.parameter.name
-        return "\(binding.dictionaryKey.stringLiteral): \(value)"
+        encodeBinding(binding)
     } + info.queryBindings.map { binding in
-        let value = binding.parameter.typeDescription.hasSuffix("?") ? "\(binding.parameter.name) ?? \"\"" : binding.parameter.name
-        return "\(binding.dictionaryKey.stringLiteral): \(value)"
+        encodeBinding(binding)
     })
 
     if dictionaryEntries.isEmpty {
