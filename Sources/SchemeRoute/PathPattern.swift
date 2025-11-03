@@ -38,7 +38,7 @@ public struct PathPattern {
         }
 
         for key in queryKeys {
-            guard let value = query[key], !value.isEmpty else { return nil }
+            let value = query[key] ?? ""
             params[key] = value
         }
         return params
@@ -61,10 +61,9 @@ public struct PathPattern {
 
         let path = renderedSegments.joined(separator: "/")
         let queryItems: [URLQueryItem] = queryKeys.compactMap { key in
-            guard let value = params[key] else { return nil }
+            guard let value = params[key], !value.isEmpty else { return nil }
             return URLQueryItem(name: key, value: value)
         }
-        if queryItems.count != queryKeys.count { return nil }
         return (path, queryItems)
     }
 

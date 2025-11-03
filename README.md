@@ -110,14 +110,73 @@ Pattern Rules
       Path example: `user/${id}/profile`
     - 쿼리 예: `pay/complete?order_id=${orderId}`<br>
       Query example: `pay/complete?order_id=${orderId}`
-- 플레이스홀더 이름은 `case` 의 연관값 라벨과 1:1 로 매칭되어야 하며, 모든 연관값은 `String` 타입이어야 합니다.<br>
-  Placeholder names must match associated value labels 1:1, and every associated value must be `String`.
+- 플레이스홀더 이름은 `case` 의 연관값 라벨과 1:1 로 매칭되어야 하며, 모든 연관값은 `LosslessStringConvertible` 프로토콜을 따르는 타입이어야 합니다 (예: `String`, `Int`, `Double`, `Bool` 등).<br>
+  Placeholder names must match associated value labels 1:1, and every associated value must conform to `LosslessStringConvertible` protocol (e.g., `String`, `Int`, `Double`, `Bool`, etc.).
 - 같은 연관값을 두 번 이상 사용할 수 없고 사용하지 않은 연관값이 있으면 오류가 발생합니다.<br>
   The same associated value cannot be used more than once, and unused associated values trigger an error.
 - 외부 라벨이 붙은 연관값(`case article(slug slug: String)`)은 지원하지 않습니다.<br>
   Associated values with external labels (e.g. `case article(slug slug: String)`) are not supported.
 - `SchemeRoute.scheme`/`host` 가 지정되어 있다면 `url()` 호출 시 기본값으로 사용됩니다. 필요하면 `url(scheme:host:)` 에서 값을 덮어쓸 수 있습니다.<br>
   When `SchemeRoute.scheme`/`host` are set, `url()` uses them automatically; override them by passing arguments to `url(scheme:host:)` when needed.
+
+### 타입 자동 변환
+Automatic Type Conversion
+
+`LosslessStringConvertible` 프로토콜을 따르는 모든 타입을 연관값으로 사용할 수 있습니다. URL 문자열과 타입 간 자동 변환이 이루어집니다.<br>
+Any type conforming to `LosslessStringConvertible` can be used as associated values. Automatic conversion between URL strings and types is performed.
+
+```swift
+@SchemeRoutable
+enum AppRoute: Equatable {
+    static var scheme: String { "myapp" }
+    static var host: String { "app" }
+
+    // Int, Bool 등의 타입 자동 변환
+    @SchemePattern("user/${id}/posts?page=${page}&premium=${premium}")
+    case userPosts(id: Int, page: Int, premium: Bool)
+
+    // 옵셔널 타입도 지원
+    @SchemePattern("product/${productId}?discount=${discount}&quantity=${quantity}")
+    case product(productId: String, discount: Double?, quantity: Int?)
+}
+
+// URL → 라우트 변환
+AppRoute(url: URL(string: "myapp://app/user/123/posts?page=2&premium=true"))
+// => userPosts(id: 123, page: 2, premium: true)
+
+AppRoute(url: URL(string: "myapp://app/product/ABC?discount=0.25&quantity=5"))
+// => product(productId: "ABC", discount: 0.25, quantity: 5)
+
+AppRoute(url: URL(string: "myapp://app/product/ABC?discount=0.25"))
+// => product(productId: "ABC", discount: 0.25, quantity: nil)
+
+// 라우트 → URL 변환
+AppRoute.userPosts(id: 999, page: 5, premium: true).url()
+// => myapp://app/user/999/posts?page=5&premium=true
+
+AppRoute.product(productId: "TEST", discount: nil, quantity: nil).url()
+// => myapp://app/product/TEST
+```
+
+**지원 타입:**<br>
+**Supported Types:**
+- `String`, `Int`, `Double`, `Bool`, `UInt` 등 기본 타입<br>
+  Built-in types like `String`, `Int`, `Double`, `Bool`, `UInt`, etc.
+- 위 타입들의 옵셔널 버전 (`Int?`, `Double?` 등)<br>
+  Optional versions of the above types (`Int?`, `Double?`, etc.)
+- `LosslessStringConvertible` 을 따르는 커스텀 타입<br>
+  Custom types conforming to `LosslessStringConvertible`
+
+**동작 방식:**<br>
+**Behavior:**
+- 변환 실패 시 (예: `"abc"` → `Int`) 라우트 매칭이 실패합니다.<br>
+  Conversion failures (e.g., `"abc"` → `Int`) result in route matching failure.
+- 옵셔널 타입: 파라미터가 없거나 빈 값이면 `nil` 로 처리됩니다.<br>
+  Optional types: Missing or empty parameters are treated as `nil`.
+- 비옵셔널 타입: 파라미터가 없거나 빈 값이면 매칭이 실패합니다 (String 제외).<br>
+  Non-optional types: Missing or empty parameters cause matching to fail (except String).
+- URL 생성 시 `nil` 값을 가진 파라미터는 URL에서 제외됩니다.<br>
+  When generating URLs, parameters with `nil` values are excluded from the URL.
 
 ## 수동 라우터 구성
 Manual Router Configuration
