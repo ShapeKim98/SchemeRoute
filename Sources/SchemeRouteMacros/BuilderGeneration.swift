@@ -11,10 +11,11 @@ private func encodeBinding(_ binding: CaseInfo.Binding) -> String {
         }
     } else {
         // 기타 타입 (LosslessStringConvertible)
+        // Swift 5.10 타입체커 버그 우회: String.init 대신 String interpolation 사용
         if param.isOptional {
-            return "\(key): \(param.name).map(String.init) ?? \"\""
+            return "\(key): \(param.name).map { \"\\($0)\" } ?? \"\""
         } else {
-            return "\(key): String(\(param.name))"
+            return "\(key): \"\\(\(param.name))\""
         }
     }
 }
